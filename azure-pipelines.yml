@@ -1,26 +1,42 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# This is the completed azure-pipelines.yaml file from previous steps.
+variables:
+  ConnectedServiceName: 'sodagreat'
+  WebAppName: 'demo-flaskpipelines'
 
 trigger:
 - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: Hosted Ubuntu 1604
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.6'
+    architecture: 'x64'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(Build.SourcesDirectory)'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/Application$(Build.BuildId).zip'
+    replaceExistingArchive: true
+    verbose: # Optional
 
-variables:
-  # Replace this name with that of the Azure service connection in your DevOps project
-  ConnectedServiceName: 'sodagreat'
+- task: AzureRMWebAppDeployment@4
+  displayName: Azure App Service Deploy
+  inputs:
+    appType: webAppLinux
+    RuntimeStack: 'PYTHON|3.6'
+    ConnectedServiceName: $(ConnectedServiceName)
+    WebAppName: $(WebAppName)
+    Package: '$(Build.ArtifactStagingDirectory)/Application$(Build.BuildId).zip'
 
-  # Replace this name to match the name of the App Service you created earlier
-  WebAppName: 'flaskpipelines-demo'
+    # The following command is specific to the python-sample-vscode-flask-tutorial code.
+    # You may or may not need a startup command for your own app.
+
+    StartupCommand: 'gunicorn --bind=0.0.0.0 --workers=4 startup:app'
+
+
+  
